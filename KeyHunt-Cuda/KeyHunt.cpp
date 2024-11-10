@@ -15,16 +15,16 @@
 #include <pthread.h>
 #endif
 
-//using namespace std;
+// using namespace std;
 
 Point Gn[CPU_GRP_SIZE / 2];
 Point _2Gn;
 
 // ----------------------------------------------------------------------------
 
-KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int coinType, bool useGpu,
-	const std::string& outputFile, bool useSSE, uint32_t maxFound, uint64_t rKey,
-	const std::string& rangeStart, const std::string& rangeEnd, bool& should_exit)
+KeyHunt::KeyHunt(const std::string &inputFile, int compMode, int searchMode, int coinType, bool useGpu,
+				 const std::string &outputFile, bool useSSE, uint32_t maxFound, uint64_t rKey,
+				 const std::string &rangeStart, const std::string &rangeEnd, bool &should_exit)
 {
 	this->compMode = compMode;
 	this->useGpu = useGpu;
@@ -46,11 +46,12 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 	secp->Init();
 
 	// load file
-	FILE* wfd;
+	FILE *wfd;
 	uint64_t N = 0;
 
 	wfd = fopen(this->inputFile.c_str(), "rb");
-	if (!wfd) {
+	if (!wfd)
+	{
 		printf("%s can not open\n", this->inputFile.c_str());
 		exit(1);
 	}
@@ -70,23 +71,27 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 	N = N / K_LENGTH;
 	rewind(wfd);
 
-	DATA = (uint8_t*)malloc(N * K_LENGTH);
+	DATA = (uint8_t *)malloc(N * K_LENGTH);
 	memset(DATA, 0, N * K_LENGTH);
 
-	uint8_t* buf = (uint8_t*)malloc(K_LENGTH);;
+	uint8_t *buf = (uint8_t *)malloc(K_LENGTH);
+	;
 
 	bloom = new Bloom(2 * N, 0.000001);
 
 	uint64_t percent = (N - 1) / 100;
 	uint64_t i = 0;
 	printf("\n");
-	while (i < N && !should_exit) {
+	while (i < N && !should_exit)
+	{
 		memset(buf, 0, K_LENGTH);
 		memset(DATA + (i * K_LENGTH), 0, K_LENGTH);
-		if (fread(buf, 1, K_LENGTH, wfd) == K_LENGTH) {
+		if (fread(buf, 1, K_LENGTH, wfd) == K_LENGTH)
+		{
 			bloom->add(buf, K_LENGTH);
 			memcpy(DATA + (i * K_LENGTH), buf, K_LENGTH);
-			if ((percent != 0) && i % percent == 0) {
+			if ((percent != 0) && i % percent == 0)
+			{
 				printf("\rLoading      : %llu %%", (i / percent));
 				fflush(stdout);
 			}
@@ -96,7 +101,8 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 	fclose(wfd);
 	free(buf);
 
-	if (should_exit) {
+	if (should_exit)
+	{
 		delete secp;
 		delete bloom;
 		if (DATA)
@@ -107,13 +113,15 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 	BLOOM_N = bloom->get_bytes();
 	TOTAL_COUNT = N;
 	targetCounter = i;
-	if (coinType == COIN_BTC) {
+	if (coinType == COIN_BTC)
+	{
 		if (searchMode == (int)SEARCH_MODE_MA)
 			printf("Loaded       : %s Bitcoin addresses\n", formatThousands(i).c_str());
 		else if (searchMode == (int)SEARCH_MODE_MX)
 			printf("Loaded       : %s Bitcoin xpoints\n", formatThousands(i).c_str());
 	}
-	else {
+	else
+	{
 		printf("Loaded       : %s Ethereum addresses\n", formatThousands(i).c_str());
 	}
 
@@ -123,14 +131,13 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 	printf("\n");
 
 	InitGenratorTable();
-
 }
 
 // ----------------------------------------------------------------------------
 
-KeyHunt::KeyHunt(const std::vector<unsigned char>& hashORxpoint, int compMode, int searchMode, int coinType,
-	bool useGpu, const std::string& outputFile, bool useSSE, uint32_t maxFound, uint64_t rKey,
-	const std::string& rangeStart, const std::string& rangeEnd, bool& should_exit)
+KeyHunt::KeyHunt(const std::vector<unsigned char> &hashORxpoint, int compMode, int searchMode, int coinType,
+				 bool useGpu, const std::string &outputFile, bool useSSE, uint32_t maxFound, uint64_t rKey,
+				 const std::string &rangeStart, const std::string &rangeEnd, bool &should_exit)
 {
 	this->compMode = compMode;
 	this->useGpu = useGpu;
@@ -150,16 +157,20 @@ KeyHunt::KeyHunt(const std::vector<unsigned char>& hashORxpoint, int compMode, i
 	secp = new Secp256K1();
 	secp->Init();
 
-	if (this->searchMode == (int)SEARCH_MODE_SA) {
+	if (this->searchMode == (int)SEARCH_MODE_SA)
+	{
 		assert(hashORxpoint.size() == 20);
-		for (size_t i = 0; i < hashORxpoint.size(); i++) {
-			((uint8_t*)hash160Keccak)[i] = hashORxpoint.at(i);
+		for (size_t i = 0; i < hashORxpoint.size(); i++)
+		{
+			((uint8_t *)hash160Keccak)[i] = hashORxpoint.at(i);
 		}
 	}
-	else if (this->searchMode == (int)SEARCH_MODE_SX) {
+	else if (this->searchMode == (int)SEARCH_MODE_SX)
+	{
 		assert(hashORxpoint.size() == 32);
-		for (size_t i = 0; i < hashORxpoint.size(); i++) {
-			((uint8_t*)xpoint)[i] = hashORxpoint.at(i);
+		for (size_t i = 0; i < hashORxpoint.size(); i++)
+		{
+			((uint8_t *)xpoint)[i] = hashORxpoint.at(i);
 		}
 	}
 	printf("\n");
@@ -176,25 +187,26 @@ void KeyHunt::InitGenratorTable()
 	Gn[0] = g;
 	g = secp->DoubleDirect(g);
 	Gn[1] = g;
-	for (int i = 2; i < CPU_GRP_SIZE / 2; i++) {
+	for (int i = 2; i < CPU_GRP_SIZE / 2; i++)
+	{
 		g = secp->AddDirect(g, secp->G);
 		Gn[i] = g;
 	}
 	// _2Gn = CPU_GRP_SIZE*G
 	_2Gn = secp->DoubleDirect(Gn[CPU_GRP_SIZE / 2 - 1]);
 
-	char* ctimeBuff;
+	char *ctimeBuff;
 	time_t now = time(NULL);
 	ctimeBuff = ctime(&now);
 	printf("Start Time   : %s", ctimeBuff);
 
-	if (rKey > 0) {
+	if (rKey > 0)
+	{
 		printf("Base Key     : Randomly changes on every %llu Mkeys\n", rKey);
 	}
 	printf("Global start : %s (%d bit)\n", this->rangeStart.GetBase16().c_str(), this->rangeStart.GetBitLength());
 	printf("Global end   : %s (%d bit)\n", this->rangeEnd.GetBase16().c_str(), this->rangeEnd.GetBitLength());
 	printf("Global range : %s (%d bit)\n", this->rangeDiff2.GetBase16().c_str(), this->rangeDiff2.GetBitLength());
-
 }
 
 // ----------------------------------------------------------------------------
@@ -225,16 +237,19 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 	pthread_mutex_lock(&ghMutex);
 #endif
 
-	FILE* f = stdout;
+	FILE *f = stdout;
 	bool needToClose = false;
 
-	if (outputFile.length() > 0) {
+	if (outputFile.length() > 0)
+	{
 		f = fopen(outputFile.c_str(), "a");
-		if (f == NULL) {
+		if (f == NULL)
+		{
 			printf("Cannot open %s for writing\n", outputFile.c_str());
 			f = stdout;
 		}
-		else {
+		else
+		{
 			needToClose = true;
 		}
 	}
@@ -246,7 +261,8 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 	fprintf(stdout, "\n=================================================================================\n");
 	fprintf(stdout, "PubAddress: %s\n", addr.c_str());
 
-	if (coinType == COIN_BTC) {
+	if (coinType == COIN_BTC)
+	{
 		fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
 		fprintf(stdout, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
 	}
@@ -268,12 +284,11 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 #else
 	pthread_mutex_unlock(&ghMutex);
 #endif
-
 }
 
 // ----------------------------------------------------------------------------
 
-bool KeyHunt::checkPrivKey(std::string addr, Int& key, int32_t incr, bool mode)
+bool KeyHunt::checkPrivKey(std::string addr, Int &key, int32_t incr, bool mode)
 {
 	Int k(&key), k2(&key);
 	k.Add((uint64_t)incr);
@@ -282,13 +297,15 @@ bool KeyHunt::checkPrivKey(std::string addr, Int& key, int32_t incr, bool mode)
 	Point p = secp->ComputePublicKey(&k);
 	std::string px = p.x.GetBase16();
 	std::string chkAddr = secp->GetAddress(mode, p);
-	if (chkAddr != addr) {
-		//Key may be the opposite one (negative zero or compressed key)
+	if (chkAddr != addr)
+	{
+		// Key may be the opposite one (negative zero or compressed key)
 		k.Neg();
 		k.Add(&secp->order);
 		p = secp->ComputePublicKey(&k);
 		std::string chkAddr = secp->GetAddress(mode, p);
-		if (chkAddr != addr) {
+		if (chkAddr != addr)
+		{
 			printf("\n=================================================================================\n");
 			printf("Warning, wrong private key generated !\n");
 			printf("  PivK :%s\n", k2.GetBase16().c_str());
@@ -305,7 +322,7 @@ bool KeyHunt::checkPrivKey(std::string addr, Int& key, int32_t incr, bool mode)
 	return true;
 }
 
-bool KeyHunt::checkPrivKeyETH(std::string addr, Int& key, int32_t incr)
+bool KeyHunt::checkPrivKeyETH(std::string addr, Int &key, int32_t incr)
 {
 	Int k(&key), k2(&key);
 	k.Add((uint64_t)incr);
@@ -314,13 +331,15 @@ bool KeyHunt::checkPrivKeyETH(std::string addr, Int& key, int32_t incr)
 	Point p = secp->ComputePublicKey(&k);
 	std::string px = p.x.GetBase16();
 	std::string chkAddr = secp->GetAddressETH(p);
-	if (chkAddr != addr) {
-		//Key may be the opposite one (negative zero or compressed key)
+	if (chkAddr != addr)
+	{
+		// Key may be the opposite one (negative zero or compressed key)
 		k.Neg();
 		k.Add(&secp->order);
 		p = secp->ComputePublicKey(&k);
 		std::string chkAddr = secp->GetAddressETH(p);
-		if (chkAddr != addr) {
+		if (chkAddr != addr)
+		{
 			printf("\n=================================================================================\n");
 			printf("Warning, wrong private key generated !\n");
 			printf("  PivK :%s\n", k2.GetBase16().c_str());
@@ -333,11 +352,11 @@ bool KeyHunt::checkPrivKeyETH(std::string addr, Int& key, int32_t incr)
 			return false;
 		}
 	}
-	output(addr, k.GetBase16()/*secp->GetPrivAddressETH(k)*/, k.GetBase16(), secp->GetPublicKeyHexETH(p));
+	output(addr, k.GetBase16() /*secp->GetPrivAddressETH(k)*/, k.GetBase16(), secp->GetPublicKeyHexETH(p));
 	return true;
 }
 
-bool KeyHunt::checkPrivKeyX(Int& key, int32_t incr, bool mode)
+bool KeyHunt::checkPrivKeyX(Int &key, int32_t incr, bool mode)
 {
 	Int k(&key);
 	k.Add((uint64_t)incr);
@@ -353,10 +372,10 @@ bool KeyHunt::checkPrivKeyX(Int& key, int32_t incr, bool mode)
 DWORD WINAPI _FindKeyCPU(LPVOID lpParam)
 {
 #else
-void* _FindKeyCPU(void* lpParam)
+void *_FindKeyCPU(void *lpParam)
 {
 #endif
-	TH_PARAM* p = (TH_PARAM*)lpParam;
+	TH_PARAM *p = (TH_PARAM *)lpParam;
 	p->obj->FindKeyCPU(p);
 	return 0;
 }
@@ -365,10 +384,10 @@ void* _FindKeyCPU(void* lpParam)
 DWORD WINAPI _FindKeyGPU(LPVOID lpParam)
 {
 #else
-void* _FindKeyGPU(void* lpParam)
+void *_FindKeyGPU(void *lpParam)
 {
 #endif
-	TH_PARAM* p = (TH_PARAM*)lpParam;
+	TH_PARAM *p = (TH_PARAM *)lpParam;
 	p->obj->FindKeyGPU(p);
 	return 0;
 }
@@ -381,9 +400,11 @@ void KeyHunt::checkMultiAddresses(bool compressed, Int key, int i, Point p1)
 
 	// Point
 	secp->GetHash160(compressed, p1, h0);
-	if (CheckBloomBinary(h0, 20) > 0) {
+	if (CheckBloomBinary(h0, 20) > 0)
+	{
 		std::string addr = secp->GetAddress(compressed, h0);
-		if (checkPrivKey(addr, key, i, compressed)) {
+		if (checkPrivKey(addr, key, i, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -397,9 +418,11 @@ void KeyHunt::checkMultiAddressesETH(Int key, int i, Point p1)
 
 	// Point
 	secp->GetHashETH(p1, h0);
-	if (CheckBloomBinary(h0, 20) > 0) {
+	if (CheckBloomBinary(h0, 20) > 0)
+	{
 		std::string addr = secp->GetAddressETH(h0);
-		if (checkPrivKeyETH(addr, key, i)) {
+		if (checkPrivKeyETH(addr, key, i))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -413,9 +436,11 @@ void KeyHunt::checkSingleAddress(bool compressed, Int key, int i, Point p1)
 
 	// Point
 	secp->GetHash160(compressed, p1, h0);
-	if (MatchHash((uint32_t*)h0)) {
+	if (MatchHash((uint32_t *)h0))
+	{
 		std::string addr = secp->GetAddress(compressed, h0);
-		if (checkPrivKey(addr, key, i, compressed)) {
+		if (checkPrivKey(addr, key, i, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -429,9 +454,11 @@ void KeyHunt::checkSingleAddressETH(Int key, int i, Point p1)
 
 	// Point
 	secp->GetHashETH(p1, h0);
-	if (MatchHash((uint32_t*)h0)) {
+	if (MatchHash((uint32_t *)h0))
+	{
 		std::string addr = secp->GetAddressETH(h0);
-		if (checkPrivKeyETH(addr, key, i)) {
+		if (checkPrivKeyETH(addr, key, i))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -445,8 +472,10 @@ void KeyHunt::checkMultiXPoints(bool compressed, Int key, int i, Point p1)
 
 	// Point
 	secp->GetXBytes(compressed, p1, h0);
-	if (CheckBloomBinary(h0, 32) > 0) {
-		if (checkPrivKeyX(key, i, compressed)) {
+	if (CheckBloomBinary(h0, 32) > 0)
+	{
+		if (checkPrivKeyX(key, i, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -460,8 +489,10 @@ void KeyHunt::checkSingleXPoint(bool compressed, Int key, int i, Point p1)
 
 	// Point
 	secp->GetXBytes(compressed, p1, h0);
-	if (MatchXPoint((uint32_t*)h0)) {
-		if (checkPrivKeyX(key, i, compressed)) {
+	if (MatchXPoint((uint32_t *)h0))
+	{
+		if (checkPrivKeyX(key, i, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
@@ -478,31 +509,38 @@ void KeyHunt::checkMultiAddressesSSE(bool compressed, Int key, int i, Point p1, 
 
 	// Point -------------------------------------------------------------------------
 	secp->GetHash160(compressed, p1, p2, p3, p4, h0, h1, h2, h3);
-	if (CheckBloomBinary(h0, 20) > 0) {
+	if (CheckBloomBinary(h0, 20) > 0)
+	{
 		std::string addr = secp->GetAddress(compressed, h0);
-		if (checkPrivKey(addr, key, i + 0, compressed)) {
+		if (checkPrivKey(addr, key, i + 0, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (CheckBloomBinary(h1, 20) > 0) {
+	if (CheckBloomBinary(h1, 20) > 0)
+	{
 		std::string addr = secp->GetAddress(compressed, h1);
-		if (checkPrivKey(addr, key, i + 1, compressed)) {
+		if (checkPrivKey(addr, key, i + 1, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (CheckBloomBinary(h2, 20) > 0) {
+	if (CheckBloomBinary(h2, 20) > 0)
+	{
 		std::string addr = secp->GetAddress(compressed, h2);
-		if (checkPrivKey(addr, key, i + 2, compressed)) {
+		if (checkPrivKey(addr, key, i + 2, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (CheckBloomBinary(h3, 20) > 0) {
+	if (CheckBloomBinary(h3, 20) > 0)
+	{
 		std::string addr = secp->GetAddress(compressed, h3);
-		if (checkPrivKey(addr, key, i + 3, compressed)) {
+		if (checkPrivKey(addr, key, i + 3, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-
 }
 
 // ----------------------------------------------------------------------------
@@ -516,52 +554,60 @@ void KeyHunt::checkSingleAddressesSSE(bool compressed, Int key, int i, Point p1,
 
 	// Point -------------------------------------------------------------------------
 	secp->GetHash160(compressed, p1, p2, p3, p4, h0, h1, h2, h3);
-	if (MatchHash((uint32_t*)h0)) {
+	if (MatchHash((uint32_t *)h0))
+	{
 		std::string addr = secp->GetAddress(compressed, h0);
-		if (checkPrivKey(addr, key, i + 0, compressed)) {
+		if (checkPrivKey(addr, key, i + 0, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (MatchHash((uint32_t*)h1)) {
+	if (MatchHash((uint32_t *)h1))
+	{
 		std::string addr = secp->GetAddress(compressed, h1);
-		if (checkPrivKey(addr, key, i + 1, compressed)) {
+		if (checkPrivKey(addr, key, i + 1, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (MatchHash((uint32_t*)h2)) {
+	if (MatchHash((uint32_t *)h2))
+	{
 		std::string addr = secp->GetAddress(compressed, h2);
-		if (checkPrivKey(addr, key, i + 2, compressed)) {
+		if (checkPrivKey(addr, key, i + 2, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-	if (MatchHash((uint32_t*)h3)) {
+	if (MatchHash((uint32_t *)h3))
+	{
 		std::string addr = secp->GetAddress(compressed, h3);
-		if (checkPrivKey(addr, key, i + 3, compressed)) {
+		if (checkPrivKey(addr, key, i + 3, compressed))
+		{
 			nbFoundKey++;
 		}
 	}
-
 }
 
 // ----------------------------------------------------------------------------
 
-void KeyHunt::getCPUStartingKey(Int & tRangeStart, Int & tRangeEnd, Int & key, Point & startP)
+void KeyHunt::getCPUStartingKey(Int &tRangeStart, Int &tRangeEnd, Int &key, Point &startP)
 {
-	if (rKey <= 0) {
+	if (rKey <= 0)
+	{
 		key.Set(&tRangeStart);
 	}
-	else {
+	else
+	{
 		key.Rand(&tRangeEnd);
 	}
 	Int km(&key);
 	km.Add((uint64_t)CPU_GRP_SIZE / 2);
 	startP = secp->ComputePublicKey(&km);
-
 }
 
 // ----------------------------------------------------------------------------
 
-void KeyHunt::FindKeyCPU(TH_PARAM * ph)
+void KeyHunt::FindKeyCPU(TH_PARAM *ph)
 {
 
 	// Global init
@@ -571,30 +617,32 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 	counters[thId] = 0;
 
 	// CPU Thread
-	IntGroup* grp = new IntGroup(CPU_GRP_SIZE / 2 + 1);
+	IntGroup *grp = new IntGroup(CPU_GRP_SIZE / 2 + 1);
 
 	// Group Init
-	Int key;// = new Int();
-	Point startP;// = new Point();
+	Int key;	  // = new Int();
+	Point startP; // = new Point();
 	getCPUStartingKey(tRangeStart, tRangeEnd, key, startP);
 
-	Int* dx = new Int[CPU_GRP_SIZE / 2 + 1];
-	Point* pts = new Point[CPU_GRP_SIZE];
+	Int *dx = new Int[CPU_GRP_SIZE / 2 + 1];
+	Point *pts = new Point[CPU_GRP_SIZE];
 
-	Int* dy = new Int();
-	Int* dyn = new Int();
-	Int* _s = new Int();
-	Int* _p = new Int();
-	Point* pp = new Point();
-	Point* pn = new Point();
+	Int *dy = new Int();
+	Int *dyn = new Int();
+	Int *_s = new Int();
+	Int *_p = new Int();
+	Point *pp = new Point();
+	Point *pn = new Point();
 	grp->Set(dx);
 
 	ph->hasStarted = true;
 	ph->rKeyRequest = false;
 
-	while (!endOfSearch) {
+	while (!endOfSearch)
+	{
 
-		if (ph->rKeyRequest) {
+		if (ph->rKeyRequest)
+		{
 			getCPUStartingKey(tRangeStart, tRangeEnd, key, startP);
 			ph->rKeyRequest = false;
 		}
@@ -603,10 +651,11 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 		int i;
 		int hLength = (CPU_GRP_SIZE / 2 - 1);
 
-		for (i = 0; i < hLength; i++) {
+		for (i = 0; i < hLength; i++)
+		{
 			dx[i].ModSub(&Gn[i].x, &startP.x);
 		}
-		dx[i].ModSub(&Gn[i].x, &startP.x);  // For the first point
+		dx[i].ModSub(&Gn[i].x, &startP.x);	  // For the first point
 		dx[i + 1].ModSub(&_2Gn.x, &startP.x); // For the next center point
 
 		// Grouped ModInv
@@ -618,7 +667,8 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 		// center point
 		pts[CPU_GRP_SIZE / 2] = startP;
 
-		for (i = 0; i < hLength && !endOfSearch; i++) {
+		for (i = 0; i < hLength && !endOfSearch; i++)
+		{
 
 			*pp = startP;
 			*pn = startP;
@@ -626,36 +676,35 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 			// P = startP + i*G
 			dy->ModSub(&Gn[i].y, &pp->y);
 
-			_s->ModMulK1(dy, &dx[i]);       // s = (p2.y-p1.y)*inverse(p2.x-p1.x);
-			_p->ModSquareK1(_s);            // _p = pow2(s)
+			_s->ModMulK1(dy, &dx[i]); // s = (p2.y-p1.y)*inverse(p2.x-p1.x);
+			_p->ModSquareK1(_s);	  // _p = pow2(s)
 
 			pp->x.ModNeg();
 			pp->x.ModAdd(_p);
-			pp->x.ModSub(&Gn[i].x);           // rx = pow2(s) - p1.x - p2.x;
+			pp->x.ModSub(&Gn[i].x); // rx = pow2(s) - p1.x - p2.x;
 
 			pp->y.ModSub(&Gn[i].x, &pp->x);
 			pp->y.ModMulK1(_s);
-			pp->y.ModSub(&Gn[i].y);           // ry = - p2.y - s*(ret.x-p2.x);
+			pp->y.ModSub(&Gn[i].y); // ry = - p2.y - s*(ret.x-p2.x);
 
 			// P = startP - i*G  , if (x,y) = i*G then (x,-y) = -i*G
 			dyn->Set(&Gn[i].y);
 			dyn->ModNeg();
 			dyn->ModSub(&pn->y);
 
-			_s->ModMulK1(dyn, &dx[i]);      // s = (p2.y-p1.y)*inverse(p2.x-p1.x);
-			_p->ModSquareK1(_s);            // _p = pow2(s)
+			_s->ModMulK1(dyn, &dx[i]); // s = (p2.y-p1.y)*inverse(p2.x-p1.x);
+			_p->ModSquareK1(_s);	   // _p = pow2(s)
 
 			pn->x.ModNeg();
 			pn->x.ModAdd(_p);
-			pn->x.ModSub(&Gn[i].x);          // rx = pow2(s) - p1.x - p2.x;
+			pn->x.ModSub(&Gn[i].x); // rx = pow2(s) - p1.x - p2.x;
 
 			pn->y.ModSub(&Gn[i].x, &pn->x);
 			pn->y.ModMulK1(_s);
-			pn->y.ModAdd(&Gn[i].y);          // ry = - p2.y - s*(ret.x-p2.x);
+			pn->y.ModAdd(&Gn[i].y); // ry = - p2.y - s*(ret.x-p2.x);
 
 			pts[CPU_GRP_SIZE / 2 + (i + 1)] = *pp;
 			pts[CPU_GRP_SIZE / 2 - (i + 1)] = *pn;
-
 		}
 
 		// First point (startP - (GRP_SZIE/2)*G)
@@ -693,32 +742,73 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 		pp->y.ModSub(&_2Gn.y);
 		startP = *pp;
 
+		// Check if the key has any character repeated 3 or more times
+		bool skipKey = false;
+		std::stringstream keyStr;
+		key.ToString(keyStr);
+		std::string keyString = keyStr.str();
+		for (int i = 0; i < keyString.length(); i++)
+		{
+			int count = 1;
+			for (int j = i + 1; j < keyString.length(); j++)
+			{
+				if (keyString[j] == keyString[i])
+				{
+					count++;
+					if (count >= 3)
+					{
+						skipKey = true;
+						break;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+			if (skipKey)
+			{
+				break;
+			}
+		}
+	}
+	if (!skipKey)
+	{
 		// Check addresses
-		if (useSSE) {
-			for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i += 4) {
-				switch (compMode) {
+		if (useSSE)
+		{
+			for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i += 4)
+			{
+				switch (compMode)
+				{
 				case SEARCH_COMPRESSED:
-					if (searchMode == (int)SEARCH_MODE_MA) {
+					if (searchMode == (int)SEARCH_MODE_MA)
+					{
 						checkMultiAddressesSSE(true, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
-					else if (searchMode == (int)SEARCH_MODE_SA) {
+					else if (searchMode == (int)SEARCH_MODE_SA)
+					{
 						checkSingleAddressesSSE(true, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
 					break;
 				case SEARCH_UNCOMPRESSED:
-					if (searchMode == (int)SEARCH_MODE_MA) {
+					if (searchMode == (int)SEARCH_MODE_MA)
+					{
 						checkMultiAddressesSSE(false, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
-					else if (searchMode == (int)SEARCH_MODE_SA) {
+					else if (searchMode == (int)SEARCH_MODE_SA)
+					{
 						checkSingleAddressesSSE(false, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
 					break;
 				case SEARCH_BOTH:
-					if (searchMode == (int)SEARCH_MODE_MA) {
+					if (searchMode == (int)SEARCH_MODE_MA)
+					{
 						checkMultiAddressesSSE(true, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 						checkMultiAddressesSSE(false, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
-					else if (searchMode == (int)SEARCH_MODE_SA) {
+					else if (searchMode == (int)SEARCH_MODE_SA)
+					{
 						checkSingleAddressesSSE(true, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 						checkSingleAddressesSSE(false, key, i, pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
 					}
@@ -726,12 +816,17 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 				}
 			}
 		}
-		else {
-			if (coinType == COIN_BTC) {
-				for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i++) {
-					switch (compMode) {
+		else
+		{
+			if (coinType == COIN_BTC)
+			{
+				for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i++)
+				{
+					switch (compMode)
+					{
 					case SEARCH_COMPRESSED:
-						switch (searchMode) {
+						switch (searchMode)
+						{
 						case (int)SEARCH_MODE_MA:
 							checkMultiAddresses(true, key, i, pts[i]);
 							break;
@@ -749,7 +844,8 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 						}
 						break;
 					case SEARCH_UNCOMPRESSED:
-						switch (searchMode) {
+						switch (searchMode)
+						{
 						case (int)SEARCH_MODE_MA:
 							checkMultiAddresses(false, key, i, pts[i]);
 							break;
@@ -767,7 +863,8 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 						}
 						break;
 					case SEARCH_BOTH:
-						switch (searchMode) {
+						switch (searchMode)
+						{
 						case (int)SEARCH_MODE_MA:
 							checkMultiAddresses(true, key, i, pts[i]);
 							checkMultiAddresses(false, key, i, pts[i]);
@@ -791,9 +888,12 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 					}
 				}
 			}
-			else {
-				for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i++) {
-					switch (searchMode) {
+			else
+			{
+				for (int i = 0; i < CPU_GRP_SIZE && !endOfSearch; i++)
+				{
+					switch (searchMode)
+					{
 					case (int)SEARCH_MODE_MA:
 						checkMultiAddressesETH(key, i, pts[i]);
 						break;
@@ -806,26 +906,27 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 				}
 			}
 		}
-		key.Add((uint64_t)CPU_GRP_SIZE);
-		counters[thId] += CPU_GRP_SIZE; // Point
 	}
-	ph->isRunning = false;
+	key.Add((uint64_t)CPU_GRP_SIZE);
+	counters[thId] += CPU_GRP_SIZE; // Point
+}
+ph->isRunning = false;
 
-	delete grp;
-	delete[] dx;
-	delete[] pts;
+delete grp;
+delete[] dx;
+delete[] pts;
 
-	delete dy;
-	delete dyn;
-	delete _s;
-	delete _p;
-	delete pp;
-	delete pn;
+delete dy;
+delete dyn;
+delete _s;
+delete _p;
+delete pp;
+delete pn;
 }
 
 // ----------------------------------------------------------------------------
 
-void KeyHunt::getGPUStartingKeys(Int & tRangeStart, Int & tRangeEnd, int groupSize, int nbThread, Int * keys, Point * p)
+void KeyHunt::getGPUStartingKeys(Int &tRangeStart, Int &tRangeEnd, int groupSize, int nbThread, Int *keys, Point *p)
 {
 
 	Int tRangeDiff(tRangeEnd);
@@ -841,7 +942,8 @@ void KeyHunt::getGPUStartingKeys(Int & tRangeStart, Int & tRangeEnd, int groupSi
 	int rangeShowThreasold = 3;
 	int rangeShowCounter = 0;
 
-	for (int i = 0; i < nbThread; i++) {
+	for (int i = 0; i < nbThread; i++)
+	{
 
 		tRangeEnd2.Set(&tRangeStart2);
 		tRangeEnd2.Add(&tRangeDiff);
@@ -853,14 +955,52 @@ void KeyHunt::getGPUStartingKeys(Int & tRangeStart, Int & tRangeEnd, int groupSi
 
 		tRangeStart2.Add(&tRangeDiff);
 
-		Int k(keys + i);
-		k.Add((uint64_t)(groupSize / 2));	// Starting key is at the middle of the group
-		p[i] = secp->ComputePublicKey(&k);
-	}
+		// Check if the key has any character repeated 3 or more times
+		bool skipKey = false;
+		char keyStr[65];
+		keys[i].ToString(keyStr, 65);
+		for (int j = 0; j < 64; j++)
+		{
+			int count = 1;
+			for (int k = j + 1; k < 64; k++)
+			{
+				if (keyStr[k] == keyStr[j])
+				{
+					count++;
+					if (count >= 3)
+					{
+						skipKey = true;
+						break;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+			if (skipKey)
+			{
+				break;
+			}
+		}
 
+		if (!skipKey)
+		{
+			// Set the key and compute the public key
+			Int k(keys + i);
+			k.Add((uint64_t)(groupSize / 2)); // Starting key is at the middle of the group
+			p[i] = secp->ComputePublicKey(&k);
+		}
+		else
+		{
+			// Skip this key and move to the next one
+			keys[i].Add(&tRangeDiff);
+			i--;
+		}
+	}
 }
 
-void KeyHunt::FindKeyGPU(TH_PARAM * ph)
+void KeyHunt::FindKeyGPU(TH_PARAM *ph)
 {
 
 	bool ok = true;
@@ -872,20 +1012,21 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 	Int tRangeStart = ph->rangeStart;
 	Int tRangeEnd = ph->rangeEnd;
 
-	GPUEngine* g;
-	switch (searchMode) {
+	GPUEngine *g;
+	switch (searchMode)
+	{
 	case (int)SEARCH_MODE_MA:
 	case (int)SEARCH_MODE_MX:
 		g = new GPUEngine(secp, ph->gridSizeX, ph->gridSizeY, ph->gpuId, maxFound, searchMode, compMode, coinType,
-			BLOOM_N, bloom->get_bits(), bloom->get_hashes(), bloom->get_bf(), DATA, TOTAL_COUNT, (rKey != 0));
+						  BLOOM_N, bloom->get_bits(), bloom->get_hashes(), bloom->get_bf(), DATA, TOTAL_COUNT, (rKey != 0));
 		break;
 	case (int)SEARCH_MODE_SA:
 		g = new GPUEngine(secp, ph->gridSizeX, ph->gridSizeY, ph->gpuId, maxFound, searchMode, compMode, coinType,
-			hash160Keccak, (rKey != 0));
+						  hash160Keccak, (rKey != 0));
 		break;
 	case (int)SEARCH_MODE_SX:
 		g = new GPUEngine(secp, ph->gridSizeX, ph->gridSizeY, ph->gpuId, maxFound, searchMode, compMode, coinType,
-			xpoint, (rKey != 0));
+						  xpoint, (rKey != 0));
 		break;
 	default:
 		printf("Invalid search mode format");
@@ -893,10 +1034,9 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 		break;
 	}
 
-
 	int nbThread = g->GetNbThread();
-	Point* p = new Point[nbThread];
-	Int* keys = new Int[nbThread];
+	Point *p = new Point[nbThread];
+	Int *keys = new Int[nbThread];
 	std::vector<ITEM> found;
 
 	printf("GPU          : %s\n\n", g->deviceName.c_str());
@@ -910,29 +1050,37 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 	ph->rKeyRequest = false;
 
 	// GPU Thread
-	while (ok && !endOfSearch) {
+	while (ok && !endOfSearch)
+	{
 
-		if (ph->rKeyRequest) {
+		if (ph->rKeyRequest)
+		{
 			getGPUStartingKeys(tRangeStart, tRangeEnd, g->GetGroupSize(), nbThread, keys, p);
 			ok = g->SetKeys(p);
 			ph->rKeyRequest = false;
 		}
 
 		// Call kernel
-		switch (searchMode) {
+		switch (searchMode)
+		{
 		case (int)SEARCH_MODE_MA:
 			ok = g->LaunchSEARCH_MODE_MA(found, false);
-			for (int i = 0; i < (int)found.size() && !endOfSearch; i++) {
+			for (int i = 0; i < (int)found.size() && !endOfSearch; i++)
+			{
 				ITEM it = found[i];
-				if (coinType == COIN_BTC) {
+				if (coinType == COIN_BTC)
+				{
 					std::string addr = secp->GetAddress(it.mode, it.hash);
-					if (checkPrivKey(addr, keys[it.thId], it.incr, it.mode)) {
+					if (checkPrivKey(addr, keys[it.thId], it.incr, it.mode))
+					{
 						nbFoundKey++;
 					}
 				}
-				else {
+				else
+				{
 					std::string addr = secp->GetAddressETH(it.hash);
-					if (checkPrivKeyETH(addr, keys[it.thId], it.incr)) {
+					if (checkPrivKeyETH(addr, keys[it.thId], it.incr))
+					{
 						nbFoundKey++;
 					}
 				}
@@ -940,29 +1088,36 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 			break;
 		case (int)SEARCH_MODE_MX:
 			ok = g->LaunchSEARCH_MODE_MX(found, false);
-			for (int i = 0; i < (int)found.size() && !endOfSearch; i++) {
+			for (int i = 0; i < (int)found.size() && !endOfSearch; i++)
+			{
 				ITEM it = found[i];
-				//Point pk;
-				//memcpy((uint32_t*)pk.x.bits, (uint32_t*)it.hash, 8);
-				//string addr = secp->GetAddress(it.mode, pk);
-				if (checkPrivKeyX(/*addr,*/ keys[it.thId], it.incr, it.mode)) {
+				// Point pk;
+				// memcpy((uint32_t*)pk.x.bits, (uint32_t*)it.hash, 8);
+				// string addr = secp->GetAddress(it.mode, pk);
+				if (checkPrivKeyX(/*addr,*/ keys[it.thId], it.incr, it.mode))
+				{
 					nbFoundKey++;
 				}
 			}
 			break;
 		case (int)SEARCH_MODE_SA:
 			ok = g->LaunchSEARCH_MODE_SA(found, false);
-			for (int i = 0; i < (int)found.size() && !endOfSearch; i++) {
+			for (int i = 0; i < (int)found.size() && !endOfSearch; i++)
+			{
 				ITEM it = found[i];
-				if (coinType == COIN_BTC) {
+				if (coinType == COIN_BTC)
+				{
 					std::string addr = secp->GetAddress(it.mode, it.hash);
-					if (checkPrivKey(addr, keys[it.thId], it.incr, it.mode)) {
+					if (checkPrivKey(addr, keys[it.thId], it.incr, it.mode))
+					{
 						nbFoundKey++;
 					}
 				}
-				else {
+				else
+				{
 					std::string addr = secp->GetAddressETH(it.hash);
-					if (checkPrivKeyETH(addr, keys[it.thId], it.incr)) {
+					if (checkPrivKeyETH(addr, keys[it.thId], it.incr))
+					{
 						nbFoundKey++;
 					}
 				}
@@ -970,12 +1125,14 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 			break;
 		case (int)SEARCH_MODE_SX:
 			ok = g->LaunchSEARCH_MODE_SX(found, false);
-			for (int i = 0; i < (int)found.size() && !endOfSearch; i++) {
+			for (int i = 0; i < (int)found.size() && !endOfSearch; i++)
+			{
 				ITEM it = found[i];
-				//Point pk;
-				//memcpy((uint32_t*)pk.x.bits, (uint32_t*)it.hash, 8);
-				//string addr = secp->GetAddress(it.mode, pk);
-				if (checkPrivKeyX(/*addr,*/ keys[it.thId], it.incr, it.mode)) {
+				// Point pk;
+				// memcpy((uint32_t*)pk.x.bits, (uint32_t*)it.hash, 8);
+				// string addr = secp->GetAddress(it.mode, pk);
+				if (checkPrivKeyX(/*addr,*/ keys[it.thId], it.incr, it.mode))
+				{
 					nbFoundKey++;
 				}
 			}
@@ -984,13 +1141,14 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 			break;
 		}
 
-		if (ok) {
-			for (int i = 0; i < nbThread; i++) {
+		if (ok)
+		{
+			for (int i = 0; i < nbThread; i++)
+			{
 				keys[i].Add((uint64_t)STEP_SIZE);
 			}
 			counters[thId] += (uint64_t)(STEP_SIZE)*nbThread; // Point
 		}
-
 	}
 
 	delete[] keys;
@@ -1003,12 +1161,11 @@ void KeyHunt::FindKeyGPU(TH_PARAM * ph)
 #endif
 
 	ph->isRunning = false;
-
 }
 
 // ----------------------------------------------------------------------------
 
-bool KeyHunt::isAlive(TH_PARAM * p)
+bool KeyHunt::isAlive(TH_PARAM *p)
 {
 
 	bool isAlive = true;
@@ -1017,12 +1174,11 @@ bool KeyHunt::isAlive(TH_PARAM * p)
 		isAlive = isAlive && p[i].isRunning;
 
 	return isAlive;
-
 }
 
 // ----------------------------------------------------------------------------
 
-bool KeyHunt::hasStarted(TH_PARAM * p)
+bool KeyHunt::hasStarted(TH_PARAM *p)
 {
 
 	bool hasStarted = true;
@@ -1031,7 +1187,6 @@ bool KeyHunt::hasStarted(TH_PARAM * p)
 		hasStarted = hasStarted && p[i].hasStarted;
 
 	return hasStarted;
-
 }
 
 // ----------------------------------------------------------------------------
@@ -1043,7 +1198,6 @@ uint64_t KeyHunt::getGPUCount()
 	for (int i = 0; i < nbGPUThread; i++)
 		count += counters[0x80L + i];
 	return count;
-
 }
 
 // ----------------------------------------------------------------------------
@@ -1055,17 +1209,16 @@ uint64_t KeyHunt::getCPUCount()
 	for (int i = 0; i < nbCPUThread; i++)
 		count += counters[i];
 	return count;
-
 }
 
 // ----------------------------------------------------------------------------
 
-void KeyHunt::rKeyRequest(TH_PARAM * p) {
+void KeyHunt::rKeyRequest(TH_PARAM *p)
+{
 
 	int total = nbCPUThread + nbGPUThread;
 	for (int i = 0; i < total; i++)
 		p[i].rKeyRequest = true;
-
 }
 // ----------------------------------------------------------------------------
 
@@ -1080,7 +1233,7 @@ void KeyHunt::SetupRanges(uint32_t totalThreads)
 
 // ----------------------------------------------------------------------------
 
-void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridSize, bool& should_exit)
+void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> gridSize, bool &should_exit)
 {
 
 	double t0;
@@ -1098,11 +1251,12 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 	if (!useGpu)
 		printf("\n");
 
-	TH_PARAM* params = (TH_PARAM*)malloc((nbCPUThread + nbGPUThread) * sizeof(TH_PARAM));
+	TH_PARAM *params = (TH_PARAM *)malloc((nbCPUThread + nbGPUThread) * sizeof(TH_PARAM));
 	memset(params, 0, (nbCPUThread + nbGPUThread) * sizeof(TH_PARAM));
 
 	// Launch CPU threads
-	for (int i = 0; i < nbCPUThread; i++) {
+	for (int i = 0; i < nbCPUThread; i++)
+	{
 		params[i].obj = this;
 		params[i].threadId = i;
 		params[i].isRunning = true;
@@ -1113,17 +1267,18 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 
 #ifdef WIN64
 		DWORD thread_id;
-		CreateThread(NULL, 0, _FindKeyCPU, (void*)(params + i), 0, &thread_id);
+		CreateThread(NULL, 0, _FindKeyCPU, (void *)(params + i), 0, &thread_id);
 		ghMutex = CreateMutex(NULL, FALSE, NULL);
 #else
 		pthread_t thread_id;
-		pthread_create(&thread_id, NULL, &_FindKeyCPU, (void*)(params + i));
+		pthread_create(&thread_id, NULL, &_FindKeyCPU, (void *)(params + i));
 		ghMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 	}
 
 	// Launch GPU threads
-	for (int i = 0; i < nbGPUThread; i++) {
+	for (int i = 0; i < nbGPUThread; i++)
+	{
 		params[nbCPUThread + i].obj = this;
 		params[nbCPUThread + i].threadId = 0x80L + i;
 		params[nbCPUThread + i].isRunning = true;
@@ -1135,13 +1290,12 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 		rangeStart.Add(&rangeDiff);
 		params[nbCPUThread + i].rangeEnd.Set(&rangeStart);
 
-
 #ifdef WIN64
 		DWORD thread_id;
-		CreateThread(NULL, 0, _FindKeyGPU, (void*)(params + (nbCPUThread + i)), 0, &thread_id);
+		CreateThread(NULL, 0, _FindKeyGPU, (void *)(params + (nbCPUThread + i)), 0, &thread_id);
 #else
 		pthread_t thread_id;
-		pthread_create(&thread_id, NULL, &_FindKeyGPU, (void*)(params + (nbCPUThread + i)));
+		pthread_create(&thread_id, NULL, &_FindKeyGPU, (void *)(params + (nbCPUThread + i)));
 #endif
 	}
 
@@ -1168,7 +1322,8 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 	memset(lastGpukeyRate, 0, sizeof(lastkeyRate));
 
 	// Wait that all threads have started
-	while (!hasStarted(params)) {
+	while (!hasStarted(params))
+	{
 		Timer::SleepMillis(500);
 	}
 
@@ -1181,10 +1336,12 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 	p100.SetInt32(100);
 	double completedPerc = 0;
 	uint64_t rKeyCount = 0;
-	while (isAlive(params)) {
+	while (isAlive(params))
+	{
 
 		int delay = 2000;
-		while (isAlive(params) && delay > 0) {
+		while (isAlive(params) && delay > 0)
+		{
 			Timer::SleepMillis(500);
 			delay -= 500;
 		}
@@ -1193,11 +1350,12 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 		uint64_t count = getCPUCount() + gpuCount;
 		ICount.SetInt64(count);
 		int completedBits = ICount.GetBitLength();
-		if (rKey <= 0) {
+		if (rKey <= 0)
+		{
 			completedPerc = CalcPercantage(ICount, rangeStart, rangeDiff2);
-			//ICount.Mult(&p100);
-			//ICount.Div(&this->rangeDiff2);
-			//completedPerc = std::stoi(ICount.GetBase10());
+			// ICount.Mult(&p100);
+			// ICount.Div(&this->rangeDiff2);
+			// completedPerc = std::stoi(ICount.GetBase10());
 		}
 
 		t1 = Timer::get_tick();
@@ -1211,27 +1369,31 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 		double avgKeyRate = 0.0;
 		double avgGpuKeyRate = 0.0;
 		uint32_t nbSample;
-		for (nbSample = 0; (nbSample < FILTER_SIZE) && (nbSample < filterPos); nbSample++) {
+		for (nbSample = 0; (nbSample < FILTER_SIZE) && (nbSample < filterPos); nbSample++)
+		{
 			avgKeyRate += lastkeyRate[nbSample];
 			avgGpuKeyRate += lastGpukeyRate[nbSample];
 		}
 		avgKeyRate /= (double)(nbSample);
 		avgGpuKeyRate /= (double)(nbSample);
 
-		if (isAlive(params)) {
+		if (isAlive(params))
+		{
 			memset(timeStr, '\0', 256);
 			printf("\r[%s] [CPU+GPU: %.2f Mk/s] [GPU: %.2f Mk/s] [C: %lf %%] [R: %llu] [T: %s (%d bit)] [F: %d]  ",
-				toTimeStr(t1, timeStr),
-				avgKeyRate / 1000000.0,
-				avgGpuKeyRate / 1000000.0,
-				completedPerc,
-				rKeyCount,
-				formatThousands(count).c_str(),
-				completedBits,
-				nbFoundKey);
+				   toTimeStr(t1, timeStr),
+				   avgKeyRate / 1000000.0,
+				   avgGpuKeyRate / 1000000.0,
+				   completedPerc,
+				   rKeyCount,
+				   formatThousands(count).c_str(),
+				   completedBits,
+				   nbFoundKey);
 		}
-		if (rKey > 0) {
-			if ((count - lastrKey) > (1000000 * rKey)) {
+		if (rKey > 0)
+		{
+			if ((count - lastrKey) > (1000000 * rKey))
+			{
 				// rKey request
 				rKeyRequest(params);
 				lastrKey = count;
@@ -1247,8 +1409,7 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 	}
 
 	free(params);
-
-	}
+}
 
 // ----------------------------------------------------------------------------
 
@@ -1257,7 +1418,8 @@ std::string KeyHunt::GetHex(std::vector<unsigned char> &buffer)
 	std::string ret;
 
 	char tmp[128];
-	for (int i = 0; i < (int)buffer.size(); i++) {
+	for (int i = 0; i < (int)buffer.size(); i++)
+	{
 		sprintf(tmp, "%02X", buffer[i]);
 		ret.append(tmp);
 	}
@@ -1268,10 +1430,11 @@ std::string KeyHunt::GetHex(std::vector<unsigned char> &buffer)
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-int KeyHunt::CheckBloomBinary(const uint8_t * _xx, uint32_t K_LENGTH)
+int KeyHunt::CheckBloomBinary(const uint8_t *_xx, uint32_t K_LENGTH)
 {
-	if (bloom->check(_xx, K_LENGTH) > 0) {
-		uint8_t* temp_read;
+	if (bloom->check(_xx, K_LENGTH) > 0)
+	{
+		uint8_t *temp_read;
 		uint64_t half, min, max, current; //, current_offset
 		int64_t rcmp;
 		int32_t r = 0;
@@ -1279,18 +1442,23 @@ int KeyHunt::CheckBloomBinary(const uint8_t * _xx, uint32_t K_LENGTH)
 		current = 0;
 		max = TOTAL_COUNT;
 		half = TOTAL_COUNT;
-		while (!r && half >= 1) {
+		while (!r && half >= 1)
+		{
 			half = (max - min) / 2;
 			temp_read = DATA + ((current + half) * K_LENGTH);
 			rcmp = memcmp(_xx, temp_read, K_LENGTH);
-			if (rcmp == 0) {
-				r = 1;  //Found!!
+			if (rcmp == 0)
+			{
+				r = 1; // Found!!
 			}
-			else {
-				if (rcmp < 0) { //data < temp_read
+			else
+			{
+				if (rcmp < 0)
+				{ // data < temp_read
 					max = (max - half);
 				}
-				else { // data > temp_read
+				else
+				{ // data > temp_read
 					min = (min + half);
 				}
 				current = min;
@@ -1303,23 +1471,25 @@ int KeyHunt::CheckBloomBinary(const uint8_t * _xx, uint32_t K_LENGTH)
 
 // ----------------------------------------------------------------------------
 
-bool KeyHunt::MatchHash(uint32_t * _h)
+bool KeyHunt::MatchHash(uint32_t *_h)
 {
 	if (_h[0] == hash160Keccak[0] &&
 		_h[1] == hash160Keccak[1] &&
 		_h[2] == hash160Keccak[2] &&
 		_h[3] == hash160Keccak[3] &&
-		_h[4] == hash160Keccak[4]) {
+		_h[4] == hash160Keccak[4])
+	{
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-bool KeyHunt::MatchXPoint(uint32_t * _h)
+bool KeyHunt::MatchXPoint(uint32_t *_h)
 {
 	if (_h[0] == xpoint[0] &&
 		_h[1] == xpoint[1] &&
@@ -1328,10 +1498,12 @@ bool KeyHunt::MatchXPoint(uint32_t * _h)
 		_h[4] == xpoint[4] &&
 		_h[5] == xpoint[5] &&
 		_h[6] == xpoint[6] &&
-		_h[7] == xpoint[7]) {
+		_h[7] == xpoint[7])
+	{
 		return true;
 	}
-	else {
+	else
+	{
 		return false;
 	}
 }
@@ -1350,7 +1522,8 @@ std::string KeyHunt::formatThousands(uint64_t x)
 
 	int numCommas = (len - 1) / 3;
 
-	if (numCommas == 0) {
+	if (numCommas == 0)
+	{
 		return s;
 	}
 
@@ -1358,10 +1531,12 @@ std::string KeyHunt::formatThousands(uint64_t x)
 
 	int count = ((len % 3) == 0) ? 0 : (3 - (len % 3));
 
-	for (int i = 0; i < len; i++) {
+	for (int i = 0; i < len; i++)
+	{
 		result += s[i];
 
-		if (count++ == 2 && i < len - 1) {
+		if (count++ == 2 && i < len - 1)
+		{
 			result += ",";
 			count = 0;
 		}
@@ -1371,22 +1546,22 @@ std::string KeyHunt::formatThousands(uint64_t x)
 
 // ----------------------------------------------------------------------------
 
-char* KeyHunt::toTimeStr(int sec, char* timeStr)
+char *KeyHunt::toTimeStr(int sec, char *timeStr)
 {
 	int h, m, s;
 	h = (sec / 3600);
 	m = (sec - (3600 * h)) / 60;
 	s = (sec - (3600 * h) - (m * 60));
 	sprintf(timeStr, "%0*d:%0*d:%0*d", 2, h, 2, m, 2, s);
-	return (char*)timeStr;
+	return (char *)timeStr;
 }
 
 // ----------------------------------------------------------------------------
 
-//#include <gmp.h>
-//#include <gmpxx.h>
-// ((input - min) * 100) / (max - min)
-//double KeyHunt::GetPercantage(uint64_t v)
+// #include <gmp.h>
+// #include <gmpxx.h>
+//  ((input - min) * 100) / (max - min)
+// double KeyHunt::GetPercantage(uint64_t v)
 //{
 //	//Int val(v);
 //	//mpz_class x(val.GetBase16().c_str(), 16);
@@ -1396,8 +1571,4 @@ char* KeyHunt::toTimeStr(int sec, char* timeStr)
 //	//mpf_class y(x);
 //	//y = y / mpf_class(r);
 //	return 0;// y.get_d();
-//}
-
-
-
-
+// }
